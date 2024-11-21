@@ -1,0 +1,13 @@
+#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:13
+#EXT-X-MEDIA-SEQUENCE:0
+#EXTINF:10.000000,
+./segment?segment=output0.ts
+#EXTINF:13.458333,
+./segment?segment=output1.ts
+#EXTINF:6.708333,
+./segment?segment=output2.ts
+#EXTINF:9.583333,
+./segment?segment=output3.ts
+#EXT-X-ENDLIST
