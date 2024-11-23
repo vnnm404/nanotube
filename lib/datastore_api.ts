@@ -72,17 +72,17 @@ export async function isChunkPresent(datastore_url: string, foldername: string, 
 
 // Function to loop over files in a folder and save chunks
 export async function saveChunksFromFolder(datastore_url: string, foldername: string, folderPath: string): Promise<void> {
-    try {
-      const files = fs.readdirSync(folderPath);
-      for (const file of files) {
-        if (file.startsWith('output')) {
-          const filepath = path.join(folderPath, file);
-          console.log(`Saving chunk for file: ${file}`);
-          await saveChunk(datastore_url, foldername, file, filepath);
-        }
+  try {
+    const files = fs.readdirSync(folderPath);
+    for (const file of files) {
+      if (file.startsWith('output')) {
+        const filepath = path.join(folderPath, file);
+        console.log(`Saving chunk for file: ${file}`);
+        await saveChunk(datastore_url, foldername, file, filepath);
       }
-    } catch (err) {
-      console.error('Error processing folder contents:', err);
-      throw err;
     }
+  } catch (err) {
+    console.error('Error processing folder contents:', err);
+    throw err;
   }
+}

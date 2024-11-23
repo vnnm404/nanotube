@@ -3,7 +3,8 @@ import fs from "fs";
 import path from "path";
 import { fileTypeFromBuffer } from "file-type";
 import { spawn } from "child_process";
-import { saveChunksFromFolder } from "../../../lib/datastore_api";
+import { saveChunk, saveChunksFromFolder } from "../../../lib/datastore_api";
+import { pickRandomDatastores } from "../../../lib/datastore_manager";
 
 function generateRandomId() {
   const chars = "abcdefghijklmnopqrstuvwxyz";
@@ -15,7 +16,7 @@ function generateRandomId() {
 }
 
 export const POST = async (req: Request) => {
-  const ffmpegPath = "node_modules/ffmpeg-static/ffmpeg";
+  const ffmpegPath = "node_modules/ffmpeg-static/ffmpeg.exe";
 
   try {
     const formData = await req.formData();
@@ -82,8 +83,7 @@ export const POST = async (req: Request) => {
           const durationRegex = /Duration:\s*([0-9:.]+)/;
           const match = durationRegex.exec(stderr);
           if (match && match[1]) {
-            const durationString = match[1]; // e.g., "00:01:23.45"
-            // Convert durationString to seconds
+            const durationString = match[1];
             const parts = durationString.split(":");
             const hours = parseFloat(parts[0]);
             const minutes = parseFloat(parts[1]);
@@ -127,9 +127,9 @@ export const POST = async (req: Request) => {
       "-start_number",
       "0",
       "-hls_time",
-      "2", // Duration of each segment in seconds
+      "2",
       "-hls_list_size",
-      "0", // Include all segments in the playlist
+      "0",
       "-hls_base_url",
       "./segment?segment=",
       "-f",
@@ -158,9 +158,35 @@ export const POST = async (req: Request) => {
       });
     });
 
-    // This will send all chunks to same url, 
-    // call saveChunk() instead to send them individually
-    await saveChunksFromFolder("http://localhost:3001", id, dataDir);
+    const chunkServers: Record<string, string[]> = {};
+
+    const files = fs.readdirSync(dataDir).filter((file) => file.endsWith(".ts"));
+    for (const file of files) {
+      const filepath = path.join(dataDir, file);
+      
+      const datastores = await pickRandomDatastores();
+      for (let i = 0; i < datastores.length; i++) {
+        const { ip, port } = datastores[i];
+        const datastore_url = `http://${ip}:${port}`;
+        console.log(`Uploading ${file} to datastore ${datastore_url}`);
+        await saveChunk(datastore_url, id, file, filepath);
+
+        // Keep track of where each chunk is saved
+        if (!chunkServers[file]) {
+          chunkServers[file] = [];
+        }
+        chunkServers[file].push(datastore_url);
+      }
+
+      fs.unlinkSync(filepath);
+      console.log(`Deleted local chunk file: ${file}`);
+    }
+
+    // Save the chunk-server mapping
+    fs.writeFileSync(
+      path.join(dataDir, "chunk_servers.json"),
+      JSON.stringify(chunkServers, null, 2)
+    );
 
     return NextResponse.json(
       { message: `File processed successfully`, id: id },

@@ -16,6 +16,7 @@
     "file-type": "^19.6.0",
     "hls.js": "^1.5.17",
     "next": "14.0.4",
+    "proper-lockfile": "^4.1.2",
     "react": "^18",
     "react-dom": "^18"
   },
