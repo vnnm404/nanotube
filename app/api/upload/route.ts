@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { fileTypeFromBuffer } from "file-type";
 import { spawn } from "child_process";
+import { saveChunksFromFolder } from "../../../lib/datastore_api";
 
 function generateRandomId() {
   const chars = "abcdefghijklmnopqrstuvwxyz";
@@ -14,7 +15,7 @@ function generateRandomId() {
 }
 
 export const POST = async (req: Request) => {
-  const ffmpegPath = "node_modules/ffmpeg-static/ffmpeg.exe";
+  const ffmpegPath = "node_modules/ffmpeg-static/ffmpeg";
 
   try {
     const formData = await req.formData();
@@ -156,6 +157,10 @@ export const POST = async (req: Request) => {
         }
       });
     });
+
+    // This will send all chunks to same url, 
+    // call saveChunk() instead to send them individually
+    await saveChunksFromFolder("http://localhost:3001", id, dataDir);
 
     return NextResponse.json(
       { message: `File processed successfully`, id: id },

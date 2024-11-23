@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
+import { isChunkPresent, getChunk } from "../../../../../lib/datastore_api";
 
 export async function GET(
   req: NextRequest,
@@ -8,10 +9,9 @@ export async function GET(
 ) {
   const url = new URL(req.url);
   const segment = url.searchParams.get("segment");
-  const filePath = path.join(process.cwd(), "data", params.id, String(segment));
-
-  if (fs.existsSync(filePath)) {
-    const file = fs.readFileSync(filePath);
+  const datastore_url = "http://localhost:3001";
+  if (await isChunkPresent(datastore_url, params.id, segment)) {
+    const file = await getChunk(datastore_url, params.id, segment);
     return new NextResponse(file, {
       headers: { "Content-Type": "video/MP2T" },
     });
