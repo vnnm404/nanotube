@@ -16,7 +16,7 @@ function generateRandomId() {
 }
 
 export const POST = async (req: Request) => {
-  const ffmpegPath = "node_modules/ffmpeg-static/ffmpeg.exe";
+  const ffmpegPath = "node_modules/ffmpeg-static/ffmpeg";
 
   try {
     const formData = await req.formData();
