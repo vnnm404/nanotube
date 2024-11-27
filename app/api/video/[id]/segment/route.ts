@@ -43,38 +43,38 @@ export async function GET(
       await markServerInactive(ip, port);
 
       // Re-upload the chunk to an active server
-      const activeDatastores = (await getDatastores()).filter(
-        (server) => server.status === "active"
-      );
+      // const activeDatastores = (await getDatastores()).filter(
+      //   (server) => server.status === "active"
+      // );
 
-      if (activeDatastores.length > 0) {
-        const fallbackDatastore = activeDatastores[0];
-        const fallbackUrl = `http://${fallbackDatastore.ip}:${fallbackDatastore.port}`;
-        const filepath = path.join(dataDir, segment);
+      // if (activeDatastores.length > 0) {
+      //   const fallbackDatastore = activeDatastores[0];
+      //   const fallbackUrl = `http://${fallbackDatastore.ip}:${fallbackDatastore.port}`;
+      //   const filepath = path.join(dataDir, segment);
 
-        if (fs.existsSync(filepath)) {
-          console.log(
-            `Re-uploading segment ${segment} to active datastore: ${fallbackUrl}`
-          );
-          await saveChunk(fallbackUrl, params.id, segment, filepath);
+      //   if (fs.existsSync(filepath)) {
+      //     console.log(
+      //       `Re-uploading segment ${segment} to active datastore: ${fallbackUrl}`
+      //     );
+      //     await saveChunk(fallbackUrl, params.id, segment, filepath);
 
-          // Update the chunk server mapping
-          chunkServers[segment].push(fallbackUrl);
-          fs.writeFileSync(
-            chunkServersPath,
-            JSON.stringify(chunkServers, null, 2)
-          );
-          console.log(
-            `Segment ${segment} successfully re-uploaded to ${fallbackUrl}`
-          );
-        } else {
-          console.error(
-            `Local file for segment ${segment} not found for re-upload`
-          );
-        }
-      } else {
-        console.error("No active datastores available for fallback");
-      }
+      //     // Update the chunk server mapping
+      //     chunkServers[segment].push(fallbackUrl);
+      //     fs.writeFileSync(
+      //       chunkServersPath,
+      //       JSON.stringify(chunkServers, null, 2)
+      //     );
+      //     console.log(
+      //       `Segment ${segment} successfully re-uploaded to ${fallbackUrl}`
+      //     );
+      //   } else {
+      //     console.error(
+      //       `Local file for segment ${segment} not found for re-upload`
+      //     );
+      //   }
+      // } else {
+      //   console.error("No active datastores available for fallback");
+      // }
     }
   }
 
