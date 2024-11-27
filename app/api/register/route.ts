@@ -19,6 +19,7 @@ export async function POST(request: Request) {
     // Ensure the directory for dataPath exists
     const dirPath = path.dirname(dataPath);
     if (!fs.existsSync(dirPath)) {
+        console.log(`Creating directory: ${dirPath}`);
         fs.mkdirSync(dirPath, { recursive: true });
         fs.writeFileSync(dataPath, JSON.stringify([], null, 2));
     }
@@ -31,18 +32,9 @@ export async function POST(request: Request) {
 
         // Initialize datastoreList
         let datastoreList: Array<{ ip: string; port: number; status: string }> = [];
-
-        // Check if datastore.json exists
-        // if (fs.existsSync(dataPath)) {
-        //     // Read and parse existing datastores
-        //     console.log(`Reading data from ${dataPath}`);
-        //     const data = fs.readFileSync(dataPath, 'utf-8');
-        //     datastoreList = JSON.parse(data);
-        // } else {
-        //     // Initialize datastore.json with an empty array
-        //     fs.writeFileSync(dataPath, JSON.stringify([], null, 2));
-        //     console.log(`Initialized ${dataPath} with an empty array.`);
-        // }
+        
+        const data = fs.readFileSync(dataPath, 'utf-8');
+        datastoreList = JSON.parse(data);
 
         // Check for duplicate datastore entries
         if (datastoreList.some((store) => store.ip === ip && store.port === port)) {
