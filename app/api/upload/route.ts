@@ -127,7 +127,7 @@ export const POST = async (req: Request) => {
       "-start_number",
       "0",
       "-hls_time",
-      "2",
+      "10",
       "-hls_list_size",
       "0",
       "-hls_base_url",
