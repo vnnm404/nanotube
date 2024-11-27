@@ -108,19 +108,108 @@ export async function removeDatastore(ip: string, port: string): Promise<void> {
     }
 }
 
+async function calculateWeightsForActiveServers(
+    activeServers: Array<{ ip: string; port: string }>,
+    basePath: string
+): Promise<{ [key: string]: number }> {
+    const weights: { [key: string]: number } = {};
+    const serverChunks: { [key: string]: number } = {};
+
+    // Initialize chunk counts for all active servers
+    for (const server of activeServers) {
+        const serverKey = `http://${server.ip}:${server.port}`;
+        serverChunks[serverKey] = 0;
+    }
+
+    // Read all chunk_servers.json files to count chunks per server
+    const dataDirs = fs.readdirSync(basePath);
+    for (const dir of dataDirs) {
+        const chunkServersPath = path.join(basePath, dir, 'chunk_servers.json');
+        if (fs.existsSync(chunkServersPath)) {
+            const chunkServers = JSON.parse(fs.readFileSync(chunkServersPath, 'utf-8'));
+
+            for (const chunk in chunkServers) {
+                const servers = chunkServers[chunk];
+                for (const server of servers) {
+                    if (serverChunks.hasOwnProperty(server)) {
+                        serverChunks[server] += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    // Find the maximum chunk count among active servers
+    const maxChunks = Math.max(...Object.values(serverChunks));
+
+    // Assign weights: fewer chunks => higher weight
+    for (const [server, chunkCount] of Object.entries(serverChunks)) {
+        if (chunkCount === 0) {
+            // If the server has 0 chunks, assign twice the weight of the maximum
+            weights[server] = (maxChunks + 1) * 2;
+        } else {
+            weights[server] = maxChunks - chunkCount + 1; // Higher weight for fewer chunks
+        }
+    }
+
+    return weights;
+}
+
 /**
  * Picks two random datastores from the list.
  */
 export async function pickRandomDatastores(): Promise<Array<{ ip: string; port: string; status: string }>> {
     const datastores = await getDatastores();
 
-    if (datastores.length < 2) {
+    // filter out inactive datastores
+    const activeDatastores = datastores.filter((store) => store.status === 'active');
+
+    if (activeDatastores.length < 2) {
         throw new Error('Not enough datastores registered to select two.');
     }
 
-    // Shuffle the datastores array and pick the first two
-    const shuffled = datastores.sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, 2);
+    // Weight probabilities by amount of chunks stored
+    // Datastores with more chunks should have a lower probability of being selected
+    // To ensure a more even distribution of chunks across datastores
+
+    // Naive implementation: shuffle the list and pick the first two
+    // const shuffled = activeDatastores.sort(() => 0.5 - Math.random());
+    // return shuffled.slice(0, 2);
+
+    // Better implementation: use a weighted random selection
+    const basePath = path.join(process.cwd(), "data"); // Adjust base path as necessary
+    const weightsMap = await calculateWeightsForActiveServers(activeDatastores, basePath);
+
+    // Assign weights to active datastores
+    const weights = activeDatastores.map((store) => weightsMap[`http://${store.ip}:${store.port}`] || 0);
+
+    console.log("WEIGHTS", weights);
+
+    // Perform weighted random selection
+    const totalWeight = weights.reduce((acc, w) => acc + w, 0);
+    const random1 = Math.random() * totalWeight;
+    const random2 = Math.random() * totalWeight;
+
+    const selectDatastore = (random: number) => {
+        let sum = 0;
+        for (let i = 0; i < activeDatastores.length; i++) {
+            sum += weights[i];
+            if (random < sum) {
+                return activeDatastores[i];
+            }
+        }
+        throw new Error('Failed to select datastore');
+    };
+
+    const firstStore = selectDatastore(random1);
+    let secondStore = selectDatastore(random2);
+
+    // Ensure the two selected datastores are different
+    while (secondStore.ip === firstStore.ip && secondStore.port === firstStore.port) {
+        secondStore = selectDatastore(Math.random() * totalWeight);
+    }
+
+    return [firstStore, secondStore];
 }
 
 export async function markServerInactive(ip: string, port: string) {
